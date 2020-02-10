@@ -67,6 +67,11 @@ struct is_container
 : decltype(adl_args::is_container(args::rank<1>{}, std::declval<T>()))
 {};
 
+template<>
+struct is_container<std::string>
+: std::false_type
+{};
+
 template<class Range>
 using value_of = std::decay_t<decltype(*adl_args::adl_begin(std::declval<Range>()))>;
 
