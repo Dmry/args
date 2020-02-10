@@ -643,22 +643,27 @@ void parse(T& cmd, std::deque<std::string> a, Ts&&... xs)
 template<class T, class... Ts>
 void parse(std::deque<std::string> a, Ts&&... xs)
 {
-    // TODO: zero initialize T
-    T cmd;
+    T cmd = {};
+    
+    args::parse(cmd, std::move(a), xs...);
+}
+
+template<class T>
+bool parse(int argc, char const *argv[])
+{
+    std::deque<std::string> as(argv+1, argv+argc);
+
     try
     {
-        args::parse(cmd, std::move(a), xs...);
+        args::parse<T>(as);
     }
     catch(const std::exception& ex)
     {
         std::cerr << "Error: " << get_name<T>() << ": " << ex.what() << std::endl;
+        return false;
 }
 
-template<class T>
-void parse(int argc, char const *argv[])
-{
-    std::deque<std::string> as(argv+1, argv+argc);
-    args::parse<T>(as);
+    return true;
 }
 
 template<class T, class F>
