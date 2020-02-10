@@ -337,6 +337,16 @@ struct context
     std::unordered_map<std::string, int> lookup;
     subcommand_map subcommands;
 
+    bool has_subcommand(const std::string& argv)
+    {
+        return subcommands.find(argv) != subcommands.end() and argv != group_name;
+    }
+
+    bool has_default_capture()
+    {
+        return lookup.find("") != lookup.end();
+    }
+
     void add(argument arg)
     {
         if (arg.flags.empty()) lookup[""] = arguments.size();
@@ -600,20 +610,25 @@ void parse(T& cmd, std::deque<std::string> a, Ts&&... xs)
     std::string core;
     for(auto&& x:a)
     {
+        if (ctx.has_subcommand(x))
+        {
+            ctx.subcommands[x].run(drop(a), cmd, xs...);
+            return;
+        } 
         if (x[0] == '-')
         {
+            capture = false;
             std::string value;
             std::tie(core, value) = args::parse_attached_value(x);
+
             if (ctx[core].type == argument_type::none)
             {
-                capture = false;
                 if (ctx[core].write("")) return;
                 for(auto&& c:value) if (ctx[std::string("-") + c].write("")) return;
             }
             else if (not value.empty())
             {
-                capture = false;
-                if (ctx[core].write(value)) return;
+                ctx[core].write(value);
             }
             else
             {
@@ -625,15 +640,27 @@ void parse(T& cmd, std::deque<std::string> a, Ts&&... xs)
             if (ctx[core].write(x)) return;
             capture = ctx[core].type == argument_type::multiple;
         }
+        else if (ctx.has_default_capture())
+        {
+            ctx[""].write(x);
+        }
         else
         {
-            if (ctx.subcommands.count(x) > 0)
+            if (core.empty())
             {
-                ctx.subcommands[x].run(drop(a), cmd, xs...);
-                break;
+                throw std::runtime_error("unknown command: " + x);
             }
-            else if (ctx[""].write(x)) return;
+            if (ctx[core].type == argument_type::none)
+            {
+                throw std::runtime_error("flag: " + core + " does not expect an argument.");
+            }
+            if (ctx[core].type != argument_type::multiple)
+            {
+                throw std::runtime_error("flag: " + core + " expects only one argument.");
+            }
         }
+
+        a.pop_front();
     }
     ctx.post_process();
 
