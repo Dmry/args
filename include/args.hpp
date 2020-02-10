@@ -651,8 +651,7 @@ void parse(std::deque<std::string> a, Ts&&... xs)
     }
     catch(const std::exception& ex)
     {
-        std::cout << "Error: " << ex.what() << std::endl;
-    }
+        std::cerr << "Error: " << get_name<T>() << ": " << ex.what() << std::endl;
 }
 
 template<class T>
