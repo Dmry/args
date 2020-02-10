@@ -207,6 +207,7 @@ std::string get_command_type_name()
     std::string name = args::get_type_name<T>();
     auto i = name.find("::");
     if (i != std::string::npos) name = name.substr(i+2);
+    if (name.back() == '&') name.pop_back();
     return trim(name, [](char c) { return c == '_'; });
 }
 
@@ -328,6 +329,9 @@ struct subcommand
     std::function<void(std::deque<std::string>, Args...)> run;
 };
 
+template<class T, class... Args>
+auto current_name() {return get_name<T>();}
+
 template<class... Args>
 struct context
 {
@@ -339,7 +343,7 @@ struct context
 
     bool has_subcommand(const std::string& argv)
     {
-        return subcommands.find(argv) != subcommands.end() and argv != group_name;
+        return subcommands.find(argv) != subcommands.end() and argv != current_name<Args...>();
     }
 
     bool has_default_capture()
@@ -372,7 +376,7 @@ struct context
     {
         if (lookup.find(flag) == lookup.end())
         {
-            throw std::runtime_error("unknown flag: " + flag);
+            throw std::runtime_error(current_name<Args...>() + ": unknown flag: " + flag);
         }
         //else
         return arguments[lookup.at(flag)];
@@ -382,7 +386,7 @@ struct context
     {
         if (lookup.find(flag) == lookup.end())
         {
-            throw std::runtime_error("unknown flag: " + flag);
+            throw std::runtime_error(current_name<Args...>() + ": unknown flag: " + flag);
         }
         //else
         return arguments[lookup.at(flag)];
@@ -686,7 +690,7 @@ bool parse(int argc, char const *argv[])
     }
     catch(const std::exception& ex)
     {
-        std::cerr << "Error: " << get_name<T>() << ": " << ex.what() << std::endl;
+        std::cerr << "Error: " << ex.what() << std::endl;
         return false;
 }
 
