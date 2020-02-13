@@ -476,6 +476,18 @@ auto eager_callback(F f)
 }
 
 template<class F>
+auto lazy_callback(F f)
+{
+    return [f](auto&& data, auto& ctx, argument& a)
+    {
+        a.add_callback([f, &ctx, &data](const argument& arg)
+        {
+            if (arg.count > 0) f(data, ctx, arg);
+        });
+    };
+}
+
+template<class F>
 auto action(F f)
 {
     return args::eager_callback(std::bind(f));
@@ -692,7 +704,7 @@ bool parse(int argc, char const *argv[])
     {
         std::cerr << "Error: " << ex.what() << std::endl;
         return false;
-}
+    }
 
     return true;
 }
